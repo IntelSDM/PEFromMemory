@@ -5,7 +5,7 @@
 #include <TlHelp32.h>
 #include <filesystem>
 
-HANDLE MapFileToMemory(LPCSTR path)
+LPVOID MapFileToMemory(LPCSTR path)
 {
     if (!std::filesystem::exists(path))
         return 0;
@@ -29,7 +29,7 @@ HANDLE MapFileToMemory(LPCSTR path)
 int RunPE(LPPROCESS_INFORMATION processinfo,LPSTARTUPINFO startinfo,LPVOID image,LPWSTR args)
 {
     WCHAR filepath[MAX_PATH];
-    if (!GetModuleFileName( NULL,filepath,sizeof(filepath)))
+    if (!GetModuleFileName(NULL,filepath,sizeof(filepath)))
         return -1;
     WCHAR buffer[MAX_PATH + 2048];
     ZeroMemory(buffer, sizeof buffer);
@@ -109,13 +109,24 @@ void main()
     STARTUPINFO startupinfo;
     ZeroMemory(&startupinfo, sizeof startupinfo);
     WCHAR args[] = L"";
-    if (!RunPE(&shellcodeinfo,&startupinfo,reinterpret_cast<LPVOID>(MapFileToMemory("C:\\Users\\dev\\Desktop\\PEFromMemory\\Build\\Debug\\PEFromMemory\\TestApp.exe")), args))
+    LPVOID shellcode = MapFileToMemory("C:\\Users\\dev\\Desktop\\PEFromMemory\\Build\\Debug\\PEFromMemory\\TestApp.exe");
+    if (shellcode == 0)
     {
-        WaitForSingleObject(shellcodeinfo.hProcess,INFINITE);
-        DWORD returnvalue = 0;
-        GetExitCodeProcess(shellcodeinfo.hProcess, &returnvalue);
-        std::cout << "Exit Code: " << returnvalue << std::endl;
-        CloseHandle(shellcodeinfo.hThread);
-        CloseHandle(shellcodeinfo.hProcess);
+        std::cout << "Failed To Map File To Memory" << std::endl;
+		return;
     }
+    std::thread thread([&]
+        {
+            if (!RunPE(&shellcodeinfo, &startupinfo, reinterpret_cast<LPVOID>(shellcode), args))
+            {
+                WaitForSingleObject(shellcodeinfo.hProcess, INFINITE);
+                DWORD returnvalue = 0;
+                GetExitCodeProcess(shellcodeinfo.hProcess, &returnvalue);
+                std::cout << "Exit Code: " << returnvalue << std::endl;
+                CloseHandle(shellcodeinfo.hThread);
+                CloseHandle(shellcodeinfo.hProcess);
+            }
+        });
+    thread.join();
+ 
 }
