@@ -109,7 +109,7 @@ void main()
     STARTUPINFO startupinfo;
     ZeroMemory(&startupinfo, sizeof startupinfo);
     WCHAR args[] = L"";
-    LPVOID shellcode = MapFileToMemory("C:\\Users\\dev\\Desktop\\PEFromMemory\\Build\\Debug\\PEFromMemory\\TestApp.exe");
+    LPVOID shellcode = MapFileToMemory("C:\\Windows\\System32\\calc.exe");
     if (shellcode == 0)
     {
         std::cout << "Failed To Map File To Memory" << std::endl;
